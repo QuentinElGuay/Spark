@@ -1,61 +1,48 @@
 from datetime import datetime
-from os import path
+import os
 import sys
 
 from pyspark import SparkContext
 
-if sys.argv < 2:
-    print("Please pass file path as arguments.")
-    sys.exit()
+## Initialization
+# Create a big file for the exercise by writing 100 times the Iliad in the same file
+file_path = '/tmp/iliad100.txt'
+with open('Spark/data/iliad.mb.txt', 'r') as iliad:
+    file_object = open(file_path, 'a')
+    text = iliad.read()
 
-file_path = sys.argv[1]
-
-if not path.exists(file_path):
-    print("File {} not found.".format(file_path))
-    sys.exit()
+    for i in range(100):
+        file_object.write(text)
+    file_object.close()
 
 # Add text to SparkContext
 sc = SparkContext()
 lines = sc.textFile(file_path)
 
 # Select and print the 100 most frequent words
+print('Those are the 100 most frequent words in the Iliad with their number of occurences:')
 word_count = lines.flatMap(lambda line: line.split(" ")) \
-                    .map(lambda x: (x, 1)) \
+                    .map(lambda word: word.strip(".,;:?!\"-'")) \
+                    .map(lambda word: (word, 1)) \
                     .reduceByKey(lambda count1, count2: count1 + count2) \
                     .takeOrdered(100, lambda i: -i[1])
 
 for (word, count) in word_count:
-    print(word.encode('utf8'), count)
+    print(word.encode('utf8'), count / 100)  # we joined 100 times the text.
 
-# List all words in the file
+# List all words in the file using persistance of the RDD
 word_count = lines.flatMap(lambda line: line.split(" ")) \
-                    .distinct() \
-                    .takeOrdered(100)
+                    .map(lambda word: word.strip(".,;:?!\"-'")) \
+                    .distinct()
+word_count.persist()
 
-for (word) in word_count:
+nb_words = word_count.count()
+print("The Iliad contains {} distinct words. Here is a sample:".format(nb_words))
+
+# Print a sample of 1% of the words
+words = word_count.sample(False, 0.01).collect()
+for word in words:
     print(word.encode('utf8'))
 
-# Test persistance of the RDD
-def countWordsWithoutPersistance(file_path):
-    now = datetime.now()
-    word_count = lines.flatMap(lambda line: line.split(" ")) \
-                        .distinct()
-                        
-    nb_words = word_count.count()
-    word_count.takeOrdered(nb_words)
-    print("Without persistance: {}".format(datetime.now() - now))
-
-
-def countWordsWithPersistance(file_path):
-    now = datetime.now()
-    word_count = lines.flatMap(lambda line: line.split(" ")) \
-                        .distinct()
-    word_count.persist()
-
-    nb_words = word_count.count()
-    word_count.takeOrdered(nb_words)
-    print("With persistance: {}".format(datetime.now() - now))
-
-
-countWordsWithoutPersistance(file_path)
-countWordsWithPersistance(file_path)
+## Remove the file
+os.remove(file_path)
