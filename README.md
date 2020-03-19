@@ -2,7 +2,7 @@
 Experimentations with spark
 
 ## Install Spark
-/!\ Spark only work on Linux / MacOs.
+/!\ Spark only works on Linux / MacOs.
 1. [Download Spark](http://spark.apache.org/downloads.html). I used Spark 2.4.5.
 2. Unzip Spark on your computer.
 3. You'll need Java installed. Carefull Spark 2.4.5 runs on Java 8. If you have an upper version of Java installed, you can follow [this thread](https://stackoverflow.com/questions/53583199/pyspark-error-unsupported-class-file-major-version-55) to solve your problem.
